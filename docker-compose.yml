@@ -1,0 +1,43 @@
+services:
+
+  mlflow-energy:
+    image: ghcr.io/mlflow/mlflow:v3.16.0
+    container_name: mlflow-energy
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/mlflow
+    command:
+      - mlflow
+      - server
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --backend-store-uri
+      - sqlite:////mlflow/mlflow.db
+      - --artifacts-destination
+      - /mlflow/mlruns
+      - --serve-artifacts
+      - --allowed-hosts
+      - localhost:5000,127.0.0.1:5000,mlflow-energy:5000,mlflow-energy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/version')"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    container_name: energy-prediction-api
+    ports:
+      - "8001:8000"
+    volumes:
+      - .:/mlflow
+    depends_on:
+      mlflow-energy:
+        condition: service_healthy
