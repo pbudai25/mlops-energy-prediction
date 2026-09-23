@@ -3,10 +3,13 @@ services:
   mlflow-energy:
     image: ghcr.io/mlflow/mlflow:v3.16.0
     container_name: mlflow-energy
+
     ports:
       - "5000:5000"
+
     volumes:
       - .:/mlflow
+
     command:
       - mlflow
       - server
@@ -21,6 +24,7 @@ services:
       - --serve-artifacts
       - --allowed-hosts
       - localhost:5000,127.0.0.1:5000,mlflow-energy:5000,mlflow-energy
+
     healthcheck:
       test:
         - CMD
@@ -30,14 +34,32 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 10s
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+
     container_name: energy-prediction-api
+
     ports:
       - "8001:8000"
+
     volumes:
       - .:/mlflow
+
+    environment:
+      LOAD_MLFLOW_MODEL: "true"
+      MLFLOW_TRACKING_URI: "http://mlflow-energy:5000"
+
     depends_on:
       mlflow-energy:
         condition: service_healthy
+
+    restart: unless-stopped
+
+
+networks:
+  default:
+    name: mlops-network
