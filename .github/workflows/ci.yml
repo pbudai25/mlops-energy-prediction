@@ -10,8 +10,10 @@ on:
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
+
+    env:
+      PYTHONPATH: .
 
     steps:
       - name: Checkout repository
