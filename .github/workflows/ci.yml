@@ -10,6 +10,7 @@ on:
 
 jobs:
   test:
+
     runs-on: ubuntu-latest
 
     steps:
@@ -26,6 +27,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Python syntax checks
+      - name: Run tests
         run: |
-          python -m compileall src
+          pytest -v
