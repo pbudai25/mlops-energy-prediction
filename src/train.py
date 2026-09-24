@@ -1,6 +1,10 @@
+import os
+
 import pandas as pd
 import mlflow
 import mlflow.sklearn
+
+from mlflow import MlflowClient
 
 from sklearn.ensemble import (
     RandomForestRegressor,
@@ -63,9 +67,12 @@ X_train, X_test, y_train, y_test = train_test_split(
 # 5. MLflow
 # --------------------------------------------------
 
-mlflow.set_tracking_uri(
+MLFLOW_TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI",
     "http://127.0.0.1:5000"
 )
+
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
 mlflow.set_experiment(
     "energy-consumption-prediction"
@@ -90,7 +97,6 @@ with mlflow.start_run():
         context="training"
     )
 
-
     # --------------------------------------------------
     # 8. Modell létrehozása
     # --------------------------------------------------
@@ -106,10 +112,9 @@ with mlflow.start_run():
             random_state=42
         )
 
-
     elif MODEL_TYPE == "gradient_boosting":
 
-        n_estimators = 100
+        n_estimators = 200
         max_depth = 3
         learning_rate = 0.1
 
@@ -120,13 +125,11 @@ with mlflow.start_run():
             random_state=42
         )
 
-
     else:
 
         raise ValueError(
             f"Ismeretlen modell: {MODEL_TYPE}"
         )
-
 
     # --------------------------------------------------
     # 9. Modell tanítása
@@ -137,7 +140,6 @@ with mlflow.start_run():
         y_train
     )
 
-
     # --------------------------------------------------
     # 10. Előrejelzés
     # --------------------------------------------------
@@ -145,7 +147,6 @@ with mlflow.start_run():
     predictions = model.predict(
         X_test
     )
-
 
     # --------------------------------------------------
     # 11. Metrikák
@@ -160,7 +161,6 @@ with mlflow.start_run():
         y_test,
         predictions
     ) ** 0.5
-
 
     # --------------------------------------------------
     # 12. Paraméterek MLflow-ba
@@ -188,7 +188,6 @@ with mlflow.start_run():
             learning_rate
         )
 
-
     # --------------------------------------------------
     # 13. Metrikák MLflow-ba
     # --------------------------------------------------
@@ -203,20 +202,102 @@ with mlflow.start_run():
         rmse
     )
 
-
     # --------------------------------------------------
     # 14. Modell mentése MLflow-ba
     # --------------------------------------------------
 
-    mlflow.sklearn.log_model(
+    model_info = mlflow.sklearn.log_model(
         model,
         name="model",
+        registered_model_name="EnergyConsumptionModel",
         serialization_format="pickle"
     )
 
+    print()
+    print("Model URI:", model_info.model_uri)
+    print("Model ID:", model_info.model_id)
 
     # --------------------------------------------------
-    # 15. Eredmények
+    # 15. Champion lekérése
+    # --------------------------------------------------
+
+    client = MlflowClient()
+
+    champion = client.get_model_version_by_alias(
+        "EnergyConsumptionModel",
+        "champion"
+    )
+
+    champion_run = client.get_run(
+        champion.run_id
+    )
+
+    champion_mae = champion_run.data.metrics["mae"]
+
+    print()
+    print(
+        f"Current champion version: {champion.version}"
+    )
+
+    print(
+        f"Champion MAE:            {champion_mae:.4f}"
+    )
+
+    print(
+        f"New model MAE:           {mae:.4f}"
+    )
+
+    # --------------------------------------------------
+    # 16. Modell összehasonlítása
+    # --------------------------------------------------
+
+    if mae < champion_mae:
+
+        print(
+            "New model is better than champion!"
+        )
+
+        model_versions = client.search_model_versions(
+            "name='EnergyConsumptionModel'"
+        )
+
+        current_run_id = (
+            mlflow.active_run().info.run_id
+        )
+
+        new_version = None
+
+        for version in model_versions:
+
+            if version.run_id == current_run_id:
+
+                new_version = version.version
+                break
+
+        if new_version is None:
+
+            raise RuntimeError(
+                "New model version not found."
+            )
+
+        client.set_registered_model_alias(
+            "EnergyConsumptionModel",
+            "champion",
+            new_version
+        )
+
+        print(
+            f"Champion updated to version {new_version}"
+        )
+
+    else:
+
+        print(
+            "Champion remains unchanged."
+        )
+
+    # --------------------------------------------------
+    # 17. Eredmények
     # --------------------------------------------------
 
     print()
