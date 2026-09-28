@@ -36,11 +36,13 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest -v
+ 
 
       - name: Build Docker image
         run: |
           docker build \
             -t ghcr.io/${{ github.repository }}:latest \
+            -t ghcr.io/${{ github.repository }}:${{ github.sha }} \
             .
 
       - name: Log in to GHCR
@@ -55,3 +57,4 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker push ghcr.io/${{ github.repository }}:latest
+          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
