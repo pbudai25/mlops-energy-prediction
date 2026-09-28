@@ -12,7 +12,6 @@ app = FastAPI(
     version="1.0"
 )
 
-
 def load_model():
     mlflow.set_tracking_uri(
         os.getenv(
@@ -21,30 +20,15 @@ def load_model():
         )
     )
 
-    client = mlflow.MlflowClient()
+    model_uri = "models:/EnergyConsumptionModel@champion"
 
-    model_version = client.get_model_version_by_alias(
-        "EnergyConsumptionModel",
-        "champion"
-    )
-
-    model_id = model_version.source.replace(
-        "models:/",
-        ""
-    )
-
-    model_path = (
-        f"/mlflow/mlruns/1/models/{model_id}/artifacts"
-    )
-
-    return mlflow.pyfunc.load_model(model_path)
+    return mlflow.pyfunc.load_model(model_uri)
 
 
 if os.getenv("LOAD_MLFLOW_MODEL", "false").lower() == "true":
     model = load_model()
 else:
     model = None
-
 
 class EnergyInput(BaseModel):
     hour: int

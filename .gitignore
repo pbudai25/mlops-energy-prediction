@@ -31,3 +31,11 @@ Thumbs.db
 
 # Logs
 *.log
+.venv-linux/
+
+# Local backup files
+*.backup
+*.bak
+*.save
+*.save.*
+mlflow.db.backup-*

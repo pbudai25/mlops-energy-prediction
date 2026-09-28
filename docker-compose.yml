@@ -1,5 +1,4 @@
 services:
-
   mlflow-energy:
     image: ghcr.io/mlflow/mlflow:v3.16.0
     container_name: mlflow-energy
@@ -8,7 +7,7 @@ services:
       - "5000:5000"
 
     volumes:
-      - .:/mlflow
+      - .:/mlflow:z
 
     command:
       - mlflow
@@ -26,11 +25,7 @@ services:
       - localhost:5000,127.0.0.1:5000,mlflow-energy:5000,mlflow-energy
 
     healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/version')"
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/version')"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -47,7 +42,7 @@ services:
       - "8001:8000"
 
     volumes:
-      - .:/mlflow
+      - .:/mlflow:z
 
     environment:
       LOAD_MLFLOW_MODEL: "true"
@@ -58,7 +53,6 @@ services:
         condition: service_healthy
 
     restart: unless-stopped
-
 
 networks:
   default:

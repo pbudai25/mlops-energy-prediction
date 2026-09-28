@@ -53,3 +53,14 @@ def test_health():
     assert data["model_loaded"] is True
     assert data["model"] == "EnergyConsumptionModel"
     assert data["alias"] == "champion"
+
+def test_predict_invalid_input():
+    response = client.post(
+        "/predict",
+        json={
+            "hour": 12,
+            "day_of_week": 2
+        }
+    )
+
+    assert response.status_code == 422
