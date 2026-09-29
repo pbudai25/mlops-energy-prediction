@@ -7,7 +7,7 @@ import pandas as pd
 
 from fastapi import FastAPI
 from pydantic import BaseModel
-
+from prometheus_fastapi_instrumentator import Instrumentator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,6 +22,7 @@ app = FastAPI(
     version="1.0"
 )
 
+Instrumentator().instrument(app).expose(app)
 
 def load_model():
     mlflow.set_tracking_uri(
