@@ -1,4 +1,6 @@
+import logging
 import os
+import time
 
 import mlflow
 import pandas as pd
@@ -7,10 +9,19 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
+
 app = FastAPI(
     title="Energy Consumption Prediction API",
     version="1.0"
 )
+
 
 def load_model():
     mlflow.set_tracking_uri(
@@ -29,6 +40,7 @@ if os.getenv("LOAD_MLFLOW_MODEL", "false").lower() == "true":
     model = load_model()
 else:
     model = None
+
 
 class EnergyInput(BaseModel):
     hour: int
@@ -58,8 +70,11 @@ def health():
         "alias": "champion"
     }
 
+
 @app.post("/predict")
 def predict(data: EnergyInput):
+    start_time = time.perf_counter()
+
     input_data = pd.DataFrame({
         "hour": [data.hour],
         "day_of_week": [data.day_of_week],
@@ -68,6 +83,21 @@ def predict(data: EnergyInput):
 
     prediction = model.predict(input_data)
 
+    predicted_value = float(prediction[0])
+
+    elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+    logger.info(
+        "prediction | hour=%s day_of_week=%s month=%s "
+        "result=%.6f latency_ms=%.2f",
+        data.hour,
+        data.day_of_week,
+        data.month,
+        predicted_value,
+        elapsed_ms
+    )
+
     return {
-        "predicted_consumption_kwh": float(prediction[0])
+        "predicted_consumption_kwh": predicted_value
     }
+
